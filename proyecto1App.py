@@ -1,29 +1,37 @@
 import requests
+from typing import Final
+from dotenv import load_dotenv
+import os
 import json
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 from datetime import datetime
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # Aquí se va a definir la clave de lectura que usa el canal de ThingSpeak
-READ_API_KEY = 'TU_CLAVE_DE_LECTURA'
+load_dotenv()
+
+READ_API_KEY: Final[str] = os.getenv('READ_API_KEY')
+SECRET_CHANNEL_ID: Final[str] = os.getenv('SECRET_CHANNEL_ID')
 
 # Aquí va la url del API REST
-URL = 'https://api.thingspeak.com/channels/TU_CANAL_DE_THINGSPEAK/feeds.json'
+URL = f'https://api.thingspeak.com/channels/{SECRET_CHANNEL_ID}/feeds.json?api_key={READ_API_KEY}&results=2'
 
 # Definir los parametros de la peticion.
 PARAMS = {'api_key': READ_API_KEY, 'results': 10}  # Últimos 10 registros.
 
+humidity_values = []
+pressure_values = []
 
 def get_data():
+    global humidity_values, pressure_values
     response = requests.get(url=URL, params=PARAMS)
     data = json.loads(response.text)
     entries = data['feeds']
 
     timestamps = []
     temperatures = []
-    humidity_values = []
-    pressure_values = []
 
     for entry in entries:
         timestamps.append(entry['created_at'])
@@ -31,8 +39,7 @@ def get_data():
         humidity_values.append(float(entry['field2']))
         pressure_values.append(float(entry['field3']))
 
-    return timestamps, temperatures, humidity_values, pressure_values
-
+    return timestamps, temperatures
 
 # Se crea la ventana para la aplicación de Tkinter
 root = tk.Tk()
@@ -42,8 +49,8 @@ root.title("Gráfica de datos de sensores")
 fig, axs = plt.subplots(3)
 
 # Función que actualiza los datos y las graficas
-def update():
-    timestamps, temperatures, _, _ = get_data()  # Solo necesitamos las temperaturas
+def update(frame):
+    timestamps, temperatures = get_data()
 
     axs[0].clear()
     axs[0].plot(timestamps, temperatures, label='Temperatura (Celsius)')
@@ -77,13 +84,3 @@ ani = FuncAnimation(fig, update, interval=5000)
 
 #Iniciar app
 root.mainloop()
-
-
-
-
-
-
-
-
-
-
